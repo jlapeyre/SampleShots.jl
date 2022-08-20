@@ -7,7 +7,7 @@ using StatsBase: countmap
 export rand_catdist, multinomial, count_int_samples, count_samples!
 
 const _toplevel_path = dirname(dirname(pathof(SampleShots)))
-const sample_lib_path = joinpath(_toplevel_path, "lib", "levs_sampler1.so")
+const sample_lib_path = joinpath(_toplevel_path, "lib", "levs_sampler.so")
 
 function __init__()
     isfile(sample_lib_path) || @warn """
@@ -20,11 +20,12 @@ end
 ### Using C++ routine
 ###
 
-function take_samples(probs::Vector{Float64}, nshot, totalprob=sum(probs))
+function sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1))
     nstates = length(probs)
     samples = Array{Int}(undef, nshot)
-    @ccall sample_lib_path.take_samples_rng(
-        nstates::Cint, nshot::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble, samples::Ptr{Clong}
+#    totalprob = sum(probs)
+    @ccall sample_lib_path.sample_categorical(
+        nstates::Cint, nshot::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble, samples::Ptr{Clong}, seed::Culong
     )::Cvoid
     return samples
 end

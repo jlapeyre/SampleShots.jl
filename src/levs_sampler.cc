@@ -6,24 +6,21 @@
 #include <gsl/gsl_randist.h>
 #include <chrono>
 
-// c++ -O3 -lblas -lgsl -o lev_sample lev_sample.cc
 // c++ -Wall -O3 -fPIC -lgsl -lcblas -shared -rdynamic -o lev_sample.so lev_sample.cc
 
 extern "C" {
-  void take_samples_rng(int nstates, int nshot, double *probs, double totalprob, long *samples);
-  void take_samples(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen);
+  void sample_categorical(int nstates, int nshot, double *probs, double totalprob, long *samples, unsigned long seed);
+  void sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed);
   long sum_ints(long *x, long n);
 }
 
-
-
 using namespace std::chrono;
 
-
-void take_samples(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen)
+void sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed)
 {
   int s, offset = 0, r = nshot;
 
+  gsl_rng_set(gslgen, seed);
   // Take nshot of samples from the above distribution, by conditional-binomial method:
   for (int j = 0; j < nstates - 1; j++)
     {
@@ -41,20 +38,13 @@ void take_samples(int nstates, int nshot, double *probs, double totalprob, long 
 }
 
 
-void take_samples_rng(int nstates, int nshot, double *probs, double totalprob, long *samples)
+void sample_categorical(int nstates, int nshot, double *probs, double totalprob, long *samples, unsigned long seed)
 {
   gsl_rng *gslgen = gsl_rng_alloc(gsl_rng_taus);
-  take_samples(nstates, nshot, probs, totalprob, samples, gslgen);
+  sample_categorical_rng(nstates, nshot, probs, totalprob, samples, gslgen, seed);
   gsl_rng_free(gslgen);
 }
 
-
-long sum_ints(long *x, long n) {
-  long _sum = 0;
-  for(int i=0; i < n; i++)
-    _sum += x[i];
-  return _sum;
-}
 
 int main()
 {
@@ -72,14 +62,15 @@ int main()
     for (int i = 0; i < nstates; i++)
         totalprob += (probs[i] = uniform(generator));
 
-    std::binomial_distribution<int> binom;
+    // std::binomial_distribution<int> binom; Using gsl instead
     gsl_rng *gslgen = gsl_rng_alloc(gsl_rng_taus);
 
     auto start = high_resolution_clock::now();
 
     int ntrials = 2;
+    unsigned long seed = 1;
     for(int i=0; i < ntrials; i++)
-      take_samples(nstates, nshot, probs, totalprob, samples, gslgen);
+      sample_categorical_rng(nstates, nshot, probs, totalprob, samples, gslgen, seed);
 
     auto stop = high_resolution_clock::now();
 
@@ -87,4 +78,3 @@ int main()
     std::cout << duration.count() << std::endl;
     return 0;
 }
-
