@@ -15,4 +15,9 @@ We are intereted in two tasks
 
 To test the C++ routines, you have to build the library. On unix, you can run the script [`make_cpp_sampler.sh`](./make_cpp_sampler.sh)
 
-GSL and BLAS must be installed.
+
+<!-- #### Dependencies -->
+
+<!-- In [`Project.toml`](./Project.toml) there are two gsl dependencies -->
+<!-- * `GSL.jl` for Julia wrappers -->
+<!-- * `GSL_jll.jl` for the shared libraries and headers. We need this for compiling C++ code -->
