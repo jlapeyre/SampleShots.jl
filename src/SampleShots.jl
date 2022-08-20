@@ -4,7 +4,53 @@ using Distributions: Categorical, Distributions, params, probs, ncategories, sup
 using Distributions: Multinomial, AliasTable
 using StatsBase: countmap
 
-export rand_catdist, multinomial, counts_categorical!, counts_categorical
+export rand_catdist, multinomial, count_int_samples, count_samples!
+
+###
+### Accumulating counts
+###
+
+
+"""
+    accumulate_counts!(func, counts, n_samps::Integer)
+
+Make `n_samps` calls to `func`, accumulating counts of results in container `counts`.
+`func` must return a valid index or key into `counts`.
+"""
+function accumulate_counts!(func, counts, n_samps::Integer)
+    for _ in 1:n_samps
+        counts[func()] += 1
+    end
+    return counts
+end
+
+max_sample_value(atab::AliasTable) = ncategories(atab)
+
+"""
+    count_samples!(counts::Vector, n_samps::Integer, sampler)
+
+Collect `n_samps` from `sampler` and accumulate counts into `counts`.
+A call `rand(sampler)`, which must return a valid index into `counts`
+will be made for each sample.
+"""
+function count_samples!(counts::Vector, n_samps::Integer, sampler)
+    fill!(counts, zero(eltype(counts)))
+    return accumulate_counts!(() -> rand(sampler), counts, n_samps)
+end
+
+"""
+    count_int_samples(n_samps::Integer, sampler)
+
+Return a vector of counts accumulated from `n_samps` samples of `sampler`.
+This calls `count_samples!`. The call `rand(sampler)` must return valid
+indices into a `Vector`.
+"""
+count_int_samples(n_samps::Integer, sampler) =
+    count_samples!(Array{Int}(undef, max_sample_value(sampler)), n_samps, sampler)
+
+###
+### Making distributions
+###
 
 """
     rand_catdist(n_cats)::Vector{Float64}
@@ -32,29 +78,6 @@ multinomial(n_samps, n_cats::Integer) = multinomial(n_samps, rand_catdist(n_cats
 multinomial(n_samps, probs::Vector) = Multinomial(n_samps, probs; check_args=false)
 
 """
-    counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
-
-Collect `n_samps` from `cat_dist_sampler` and accumulate counts into `counts`.
-"""
-function counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
-    fill!(counts, zero(eltype(counts)))
-    for _ in 1:n_samps
-        counts[rand(cat_dist_sampler)] += 1
-    end
-    return counts
-end
-
-"""
-    counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable)
-
-Return a vector of counts accumulated from `n_samps` samples of `cat_dist_sampler`.
-This calls `counts_categorical!`.
-"""
-counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable) =
-    counts_categorical!(Array{Int}(undef, ncategories(cat_dist_sampler)), n_samps, cat_dist_sampler)
-
-
-"""
     my_multinomial(n_samps, probs)
 
 Sample from the distribution of counts obtained by drawing `n_samps` samples from discrete
@@ -74,6 +97,25 @@ function my_multinomial(n_samps, probs)
     push!(counts, Nrem) # All the remaining go with last i with prob 1.
     return counts
 end
+
+# """
+#     counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
+
+# Collect `n_samps` from `cat_dist_sampler` and accumulate counts into `counts`.
+# """
+# function counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
+#     fill!(counts, zero(eltype(counts)))
+#     return accumulate_counts!(() -> rand(cat_dist_sampler), counts, n_samps)
+# end
+
+# """
+#     counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable)
+
+# Return a vector of counts accumulated from `n_samps` samples of `cat_dist_sampler`.
+# This calls `counts_categorical!`.
+# """
+# counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable) =
+#     counts_categorical!(Array{Int}(undef, ncategories(cat_dist_sampler)), n_samps, cat_dist_sampler)
 
 
 end # module
