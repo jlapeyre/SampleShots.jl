@@ -16,17 +16,30 @@ function rand_catdist(n_cat)::Vector{Float64}
     probs .= probs ./ sum(probs)
 end
 
+"""
+    multinomial(n_samps, probs::Vector)
+
+Return a `Multinomial` instance for sampling counts corresponding to `n_samps` samples of
+the categorical distribution `probs`.
+
+    multinomial(n_samps, n_cat::Integer)
+
+Construct the `Multinoial` using random probabilities via `rand_catdist`.
+"""
+multinomial(n_samps, n_cat::Integer) = multinomial(n_samps, rand_catdist(n_cat))
+multinomial(n_samps, probs::Vector) = Multinomial(n_samps, probs; check_args=false)
 
 """
     multinomial(n_samps, probs::Vector)
 
+"""
     counts_categorical(n_samps, Categorical(_probs; check_args=false))
 
 counts_categorical(n_samps::Integer, cat_dist::Categorical) =
     counts_categorical!(Array{Int}(undef, ncategories(cat_dist)), n_samps, cat_dist)
 
 
-"""
+
     my_multinomial(n_samps, probs)
 
 Sample from the distribution of counts obtained by drawing `n_samps` samples from discrete
