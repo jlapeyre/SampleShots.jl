@@ -20,15 +20,18 @@ end
 ### Using C++ routine
 ###
 
-function sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1))
+function sample_categorical!(
+    samples::Vector{Int64}, probs::Vector{Float64}, totalprob::Float64=sum(probs); seed = UInt64(1))
     nstates = length(probs)
-    samples = Array{Int}(undef, nshot)
-#    totalprob = sum(probs)
+    nshot = length(samples)
     @ccall sample_lib_path.sample_categorical(
         nstates::Cint, nshot::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble, samples::Ptr{Clong}, seed::Culong
     )::Cvoid
     return samples
 end
+
+sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
+    sample_categorical!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
 
 
 ###
