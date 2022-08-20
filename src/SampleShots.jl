@@ -20,24 +20,22 @@ end
 ### Using C++ routine
 ###
 
-function sample_categorical!(
-    samples::Vector{Int64}, probs::Vector{Float64}, totalprob::Float64=sum(probs); seed = UInt64(1))
-    nstates = length(probs)
-    nshot = length(samples)
+function sample_categorical!(samples::Vector{Int64}, probs::Vector{Float64},
+                             totalprob::Float64=sum(probs); seed = 1)
     @ccall sample_lib_path.sample_categorical(
-        nstates::Cint, nshot::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble, samples::Ptr{Clong}, seed::Culong
-    )::Cvoid
+        length(probs)::Cint, length(samples)::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble,
+        samples::Ptr{Clong}, seed::Culong)::Cvoid
     return samples
 end
 
 sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
     sample_categorical!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
 
-
 ###
 ### Accumulating counts
 ###
 
+Base.maximum(atab::AliasTable) = ncategories(atab) # Should be defined, but is not
 
 """
     accumulate_counts!(func, counts, n_samps::Integer)
@@ -52,8 +50,6 @@ function accumulate_counts!(func, counts, n_samps::Integer)
     return counts
 end
 
-max_sample_value(atab::AliasTable) = ncategories(atab)
-
 """
     count_samples!(counts::Vector, n_samps::Integer, sampler)
 
@@ -67,14 +63,14 @@ function count_samples!(counts::Vector, n_samps::Integer, sampler)
 end
 
 """
-    count_int_samples(n_samps::Integer, sampler)
+    count_samples(n_samps::Integer, sampler)
 
 Return a vector of counts accumulated from `n_samps` samples of `sampler`.
 This calls `count_samples!`. The call `rand(sampler)` must return valid
 indices into a `Vector`.
 """
-count_int_samples(n_samps::Integer, sampler) =
-    count_samples!(Array{Int}(undef, max_sample_value(sampler)), n_samps, sampler)
+count_samples(n_samps::Integer, sampler) =
+    count_samples!(Array{Int}(undef, maximum(sampler)), n_samps, sampler)
 
 ###
 ### Making distributions
@@ -125,25 +121,5 @@ function my_multinomial(n_samps, probs)
     push!(counts, Nrem) # All the remaining go with last i with prob 1.
     return counts
 end
-
-# """
-#     counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
-
-# Collect `n_samps` from `cat_dist_sampler` and accumulate counts into `counts`.
-# """
-# function counts_categorical!(counts::Vector, n_samps::Integer, cat_dist_sampler::AliasTable)
-#     fill!(counts, zero(eltype(counts)))
-#     return accumulate_counts!(() -> rand(cat_dist_sampler), counts, n_samps)
-# end
-
-# """
-#     counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable)
-
-# Return a vector of counts accumulated from `n_samps` samples of `cat_dist_sampler`.
-# This calls `counts_categorical!`.
-# """
-# counts_categorical(n_samps::Integer, cat_dist_sampler::AliasTable) =
-#     counts_categorical!(Array{Int}(undef, ncategories(cat_dist_sampler)), n_samps, cat_dist_sampler)
-
 
 end # module
