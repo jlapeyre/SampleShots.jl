@@ -7,21 +7,28 @@
 #include <chrono>
 
 // c++ -O3 -lblas -lgsl -o lev_sample lev_sample.cc
+// c++ -Wall -O3 -fPIC -lgsl -lcblas -shared -rdynamic -o lev_sample.so lev_sample.cc
+
+extern "C" {
+  void take_samples_rng(int nstates, int nshot, double *probs, double totalprob, long *samples);
+  void take_samples(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen);
+  long sum_ints(long *x, long n);
+}
+
+
 
 using namespace std::chrono;
 
-void take_samples(int nstates, int nshot, double *probs, double totalprob, int *samples, gsl_rng *gslgen)
+
+void take_samples(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen)
 {
   int s, offset = 0, r = nshot;
 
-  int greater_than_zero_count = 0;
   // Take nshot of samples from the above distribution, by conditional-binomial method:
   for (int j = 0; j < nstates - 1; j++)
     {
       // s = binom(generator, std::binomial_distribution<int>::param_type(r, probs[j]/totalprob));
       s = gsl_ran_binomial(gslgen, probs[j] / totalprob, r);
-      if(s > 3)
-        greater_than_zero_count += 1;
       r -= s;
       for (int k = 0; k < s; k++)
         samples[offset++] = j;
@@ -31,12 +38,19 @@ void take_samples(int nstates, int nshot, double *probs, double totalprob, int *
     }
   for (int k = 0; k < r; k++)
     samples[offset++] = nstates - 1;
-  std::cout << "num counts > 0 : " << greater_than_zero_count << std::endl;
 }
 
 
-int sum_ints(int *x, int n) {
-  int _sum = 0;
+void take_samples_rng(int nstates, int nshot, double *probs, double totalprob, long *samples)
+{
+  gsl_rng *gslgen = gsl_rng_alloc(gsl_rng_taus);
+  take_samples(nstates, nshot, probs, totalprob, samples, gslgen);
+  gsl_rng_free(gslgen);
+}
+
+
+long sum_ints(long *x, long n) {
+  long _sum = 0;
   for(int i=0; i < n; i++)
     _sum += x[i];
   return _sum;
@@ -52,7 +66,7 @@ int main()
     std::default_random_engine generator;
     std::uniform_real_distribution<double> uniform(0.0, 1.0);
     double *probs = new double[nstates], totalprob = 0.0;
-    int samples[nshot];
+    long samples[nshot];
 
     // Generate (unnormalized) nq-qubit probability distr. Don't include this in timing
     for (int i = 0; i < nstates; i++)

@@ -6,6 +6,30 @@ using StatsBase: countmap
 
 export rand_catdist, multinomial, count_int_samples, count_samples!
 
+const _toplevel_path = dirname(dirname(pathof(SampleShots)))
+const sample_lib_path = joinpath(_toplevel_path, "lib", "levs_sampler1.so")
+
+function __init__()
+    isfile(sample_lib_path) || @warn """
+    $sample_lib_path not found.
+    See the README.md for information on how to compile it.
+    """
+end
+
+###
+### Using C++ routine
+###
+
+function take_samples(probs::Vector{Float64}, nshot, totalprob=sum(probs))
+    nstates = length(probs)
+    samples = Array{Int}(undef, nshot)
+    @ccall sample_lib_path.take_samples_rng(
+        nstates::Cint, nshot::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble, samples::Ptr{Clong}
+    )::Cvoid
+    return samples
+end
+
+
 ###
 ### Accumulating counts
 ###
