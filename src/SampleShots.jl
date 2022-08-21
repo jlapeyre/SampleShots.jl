@@ -1,7 +1,5 @@
 module SampleShots
 
-import GSL  # For Julia wrappers
-import GSL_jll # For shared libraries and header files
 
 using Distributions: Categorical, Distributions, params, probs, ncategories, support, median
 using Distributions: Multinomial, AliasTable
@@ -9,27 +7,12 @@ using StatsBase: countmap
 
 export rand_catdist, multinomial, count_int_samples, count_samples!
 
-const _PACKAGE_DIR = dirname(dirname(pathof(SampleShots)))
-const _SAMPLE_LIB_PATH = joinpath(_PACKAGE_DIR, "lib", "levs_sampler." * Libc.Libdl.dlext)
+include("compile_cpp.jl")
 
-function __init__()
-    isfile(_SAMPLE_LIB_PATH) || @warn """
-    $_SAMPLE_LIB_PATH not found.
-    See the README.md for information on how to compile it.
-    """
+function __init__() # called be loading module
+    ensure_cpp_lib_compiled()
 end
 
-
-###
-### Compiling C++ code
-###
-
-const _GSL_INCLUDE_PATH = joinpath(GSL_jll.artifact_dir, "include", "gsl")
-const _GSL_LIB_PATH = joinpath(GSL_jll.artifact_dir, "lib")
-
-###
-### Using C++ routine
-###
 
 function sample_categorical!(samples::Vector{Int64}, probs::Vector{Float64},
                              totalprob::Float64=sum(probs); seed = 1)
