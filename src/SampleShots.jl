@@ -1,6 +1,5 @@
 module SampleShots
 
-
 using Distributions: Categorical, Distributions, params, probs, ncategories, support, median
 using Distributions: Multinomial, AliasTable
 using StatsBase: countmap
@@ -9,10 +8,9 @@ export rand_catdist, multinomial, count_int_samples, count_samples!
 
 include("compile_cpp.jl")
 
-function __init__() # called be loading module
+function __init__()
     ensure_cpp_lib_compiled()
 end
-
 
 function sample_categorical!(samples::Vector{Int64}, probs::Vector{Float64},
                              totalprob::Float64=sum(probs); seed = 1)
@@ -29,7 +27,7 @@ sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=su
 ### Accumulating counts
 ###
 
-Base.maximum(atab::AliasTable) = ncategories(atab) # Should be defined, but is not
+Base.maximum(atab::AliasTable) = ncategories(atab) # Should be defined already, but is not.
 
 """
     accumulate_counts!(func, counts, n_samps::Integer)

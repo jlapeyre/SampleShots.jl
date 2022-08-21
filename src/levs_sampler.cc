@@ -5,8 +5,6 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-// c++ -Wall -O3 -fPIC -lgsl -lcblas -shared -rdynamic -o lev_sample.so lev_sample.cc
-
 extern "C" {
   void sample_categorical(int nstates, int nshot, double *probs, double totalprob, long *samples, unsigned long seed);
   void sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed);

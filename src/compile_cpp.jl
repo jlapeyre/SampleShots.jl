@@ -16,10 +16,11 @@ function fpic_flag()
 end
 
 function compile_cpp_lib()
-    include_path = PC.shell_escape(joinpath(GSL_jll.artifact_dir, "include", "gsl"))
-    lib_path = PC.shell_escape(joinpath(GSL_jll.artifact_dir, "lib"))
-    sample_src_path = joinpath(_PACKAGE_DIR, "src", "$_SRC_NAME.cc") # escaping this makes compilation fail.
-    cmd = `$(PC.bitflag()) -Wall -march=native -O3 $(fpic_flag()) -L$lib_path -lgsl  -lgslcblas -shared -rdynamic -o $_SAMPLE_LIB_PATH $sample_src_path -I$include_path, -Wl,-rpath=$lib_path`
+    # Escaping is probably not done correctly here
+    include_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "include")))
+    lib_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "lib")))
+    sample_src_path = joinpath(_PACKAGE_DIR, "src", "$_SRC_NAME.cc")
+    cmd = `$(PC.bitflag()) -Wall -march=native -O3 $(fpic_flag()) -I$include_path -L$lib_path -lgsl  -lgslcblas -shared -rdynamic  -o $_SAMPLE_LIB_PATH $sample_src_path  -Wl,-rpath=$lib_path`
 
     @info "Compiling C++ code."
     try
