@@ -129,37 +129,28 @@ end
 
 function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, nsamp, probs::Vector, samples, set_val_func)
     binomial_func = (rngs, n, p) -> rand(rng, Binomial(n, p))::Int
-    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+    return _multinomial_or_categorical!(rng, binomial_func, nsamp, probs, samples, set_val_func)
 end
 
 function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples, set_val_func)
     binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
-    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+    return _multinomial_or_categorical!(rng, binomial_func, nsamp, probs, samples, set_val_func)
 end
 
-function trymultnomial!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples)
-    binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
-    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, counts_func)
-end
+# function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, nsamp, probs::Vector, samples, set_val_func)
+#     binomial_func = (rngs, n, p) -> rand(rng, Binomial(n, p))::Int
+#     return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+# end
 
-
-function bestmult!(rng, nsamp, probs::Vector, samples)
-    sum_p = zero(eltype(probs))
-    sum_n = 0
-    norm = sum(probs)
-    @inbounds for k in eachindex(probs)
-        sample = probs[k] > 0 ?
-            GSL.ran_binomial(rng, probs[k] / (norm - sum_p), nsamp - sum_n) : 0
-        samples[k] = sample
-        sum_p += probs[k]
-        sum_n += sample
-    end
-    return samples
-end
-
+# function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples, set_val_func)
+#     binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
+#     return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+# end
 
 # The main structure is copied from the gsl C function gsl_ran_multinomial
-function _multinomial_or_categorical!(rng, nsamp, probs::Vector, samples, binomial_func, set_val_func)
+# binomial_func -- Function that samples from the binomial distribution
+# set_val_func -- function that accumulates either 1) samples for categorical, or 2) binned samples for multinomial
+function _multinomial_or_categorical!(rng, binomial_func, nsamp, probs::Vector, samples, set_val_func)
     sum_p = zero(eltype(probs))
     sum_n = 0
     norm = sum(probs)
