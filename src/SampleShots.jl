@@ -179,7 +179,6 @@ function _multinomial_or_categorical!(rng, binomial_func, nsamp, probs::Vector, 
     return samples
 end
 
-
 gsl_multinomial(rng::Ptr{GSL.gsl_rng}, nsamp, probs::AbstractVector) =
     gsl_multinomial!(rng, nsamp, probs, Vector{UInt32}(undef, length(probs)))
 
