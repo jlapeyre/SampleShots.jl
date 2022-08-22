@@ -109,7 +109,6 @@ Construct the `Multinomial` using random probabilities via `rand_catdist`.
 multinomial_julia(n_samps, n_cats::Integer) = multinomial(n_samps, rand_catdist(n_cats))
 multinomial_julia(n_samps, probs::Vector) = Multinomial(n_samps, probs; check_args=false)
 
-
 function multinom_rand(nsamp::Integer, p::AbstractVector{Float64})
     rng = Random.default_rng()
     x = Vector{Int}(undef, length(p))
@@ -178,6 +177,15 @@ function _multinomial_or_categorical!(rng, binomial_func, nsamp, probs::Vector, 
         sum_n += sample
     end
     return samples
+end
+
+
+gsl_multinomial(rng::Ptr{GSL.gsl_rng}, nsamp, probs::AbstractVector) =
+    gsl_multinomial!(rng, nsamp, probs, Vector{UInt32}(undef, length(probs)))
+
+function gsl_multinomial!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::AbstractVector, counts::AbstractVector)
+    GSL.ran_multinomial(rng, length(probs), nsamp, probs, counts)
+    return counts
 end
 
 
