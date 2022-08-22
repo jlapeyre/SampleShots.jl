@@ -1,7 +1,9 @@
 module SampleShots
 
+using GSL: GSL
+using Random: Random
 using Distributions: Categorical, Distributions, params, probs, ncategories, support, median
-using Distributions: Multinomial, AliasTable
+using Distributions: Multinomial, AliasTable, Binomial, BinomialTPESampler
 using StatsBase: countmap
 
 export rand_catdist, multinomial, count_int_samples, count_samples!
@@ -12,7 +14,7 @@ function __init__()
     ensure_cpp_lib_compiled()
 end
 
-function sample_categorical!(samples::Vector{Int64}, probs::Vector{Float64},
+function sample_categorical_cpp!(samples::Vector{Int64}, probs::Vector{Float64},
                              totalprob::Float64=sum(probs); seed = 1)
     @ccall _SAMPLE_LIB_PATH.sample_categorical(
         length(probs)::Cint, length(samples)::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble,
@@ -20,8 +22,8 @@ function sample_categorical!(samples::Vector{Int64}, probs::Vector{Float64},
     return samples
 end
 
-sample_categorical(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
-    sample_categorical!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
+sample_categorical_cpp(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
+    sample_categorical_cpp!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
 
 ###
 ### Accumulating counts
@@ -81,37 +83,94 @@ function rand_catdist(n_cats)::Vector{Float64}
 end
 
 """
-    multinomial(n_samps, probs::Vector)
+    multinomial_julia(n_samps, probs::Vector)
 
 Return a `Multinomial` instance for sampling counts corresponding to `n_samps` samples of
 the categorical distribution `probs`.
 
-    multinomial(n_samps, n_cats::Integer)
+    multinomial_julia(n_samps, n_cats::Integer)
 
 Construct the `Multinomial` using random probabilities via `rand_catdist`.
 """
-multinomial(n_samps, n_cats::Integer) = multinomial(n_samps, rand_catdist(n_cats))
-multinomial(n_samps, probs::Vector) = Multinomial(n_samps, probs; check_args=false)
+multinomial_julia(n_samps, n_cats::Integer) = multinomial(n_samps, rand_catdist(n_cats))
+multinomial_julia(n_samps, probs::Vector) = Multinomial(n_samps, probs; check_args=false)
 
-"""
-    my_multinomial(n_samps, probs)
 
-Sample from the distribution of counts obtained by drawing `n_samps` samples from discrete
-distribution `probs`.
-"""
-function my_multinomial(n_samps, probs)
-    sum(probs) ≈ 1 || error("probs is not a normalized probability distribution")
-    Nrem = n_samps   # N - Nrem are the samples collected so far.
-    counts = Array{Int}(undef, length(probs)) # samples of counts.
-    q = one(eltype(probs)) # unnormalized probability of remaining i
-    for p in @view probs[begin:end-1] # firstindex(probs):(lastindex(probs) - 1)
-        nsamp = rand(Binomial(Nrem, p / q))
-        push!(counts, nsamp)
-        Nrem -= nsamp
-        q -= p
+function multinom_rand(nsamp::Integer, p::AbstractVector{Float64})
+    rng = Random.default_rng()
+    x = Vector{Int}(undef, length(p))
+    return Distributions.multinom_rand!(rng, nsamp, p, x)
+end
+
+function _fill_one_val(v::Vector, val::Integer, k::Integer, sum_n::Integer)
+    for i in 1:val
+        @inbounds v[sum_n + i] = k
     end
-    push!(counts, Nrem) # All the remaining go with last i with prob 1.
-    return counts
+    return v
+end
+
+function counts_func(v::Vector, val::Integer, k::Integer, sum_n)
+    @inbounds v[k] = val
+end
+
+categorical(rng, nsamp::Integer, probs::AbstractVector) = categorical!(rng, nsamp, probs, Vector{Int}(undef, nsamp))
+
+function categorical!(rng, nsamp::Integer, probs::AbstractVector, samples::Vector)
+    length(samples) >= nsamp || throw(DimensionMismatch("length(samples) must be at least as large as nsamp"))
+    return _multinomial_or_categorical_rng!(rng, nsamp, probs, samples, _fill_one_val)
+end
+
+multinomial(rng, nsamp, probs::AbstractVector) = multinomial!(rng, nsamp, probs, similar(probs, Int))
+
+function multinomial!(rng, nsamp, probs::AbstractVector, samples::Vector)
+    length(probs) == length(samples) || throw(DimensionMismatch("`probs` and `samples` must have the same length"))
+    return _multinomial_or_categorical_rng!(rng, nsamp, probs, samples, counts_func)
+end
+
+function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, nsamp, probs::Vector, samples, set_val_func)
+    binomial_func = (rngs, n, p) -> rand(rng, Binomial(n, p))::Int
+    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+end
+
+function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples, set_val_func)
+    binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
+    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
+end
+
+function trymultnomial!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples)
+    binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
+    return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, counts_func)
+end
+
+
+function bestmult!(rng, nsamp, probs::Vector, samples)
+    sum_p = zero(eltype(probs))
+    sum_n = 0
+    norm = sum(probs)
+    @inbounds for k in eachindex(probs)
+        sample = probs[k] > 0 ?
+            GSL.ran_binomial(rng, probs[k] / (norm - sum_p), nsamp - sum_n) : 0
+        samples[k] = sample
+        sum_p += probs[k]
+        sum_n += sample
+    end
+    return samples
+end
+
+
+# The main structure is copied from the gsl C function gsl_ran_multinomial
+function _multinomial_or_categorical!(rng, nsamp, probs::Vector, samples, binomial_func, set_val_func)
+    sum_p = zero(eltype(probs))
+    sum_n = 0
+    norm = sum(probs)
+    @inbounds for k in eachindex(probs)
+        sample = probs[k] > 0 ?
+            binomial_func(rng, nsamp - sum_n, probs[k] / (norm - sum_p)) : 0
+        set_val_func(samples, sample, k, sum_n)
+        sum_p += probs[k]
+        sum_n += sample
+    end
+    return samples
 end
 
 end # module
