@@ -6,7 +6,8 @@ using Distributions: Categorical, Distributions, params, probs, ncategories, sup
 using Distributions: Multinomial, AliasTable, Binomial, BinomialTPESampler
 using StatsBase: countmap
 
-export rand_catdist, multinomial, count_int_samples, count_samples!
+export rand_catdist, multinomial, count_samples!
+export categorical_cpp!, categorical_cpp_rng!, categorical_cpp
 
 include("compile_cpp.jl")
 
@@ -14,7 +15,16 @@ function __init__()
     ensure_cpp_lib_compiled()
 end
 
-function sample_categorical_cpp!(samples::Vector{Int64}, probs::Vector{Float64},
+function categorical_cpp_rng!(rng::Ptr{GSL.gsl_rng}, samples::Vector{Int64}, probs::Vector{Float64},
+                             totalprob::Float64=sum(probs); seed = 1)
+    @ccall _SAMPLE_LIB_PATH.sample_categorical_rng(
+        length(probs)::Cint, length(samples)::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble,
+        samples::Ptr{Clong}, rng::Ptr{Cvoid}, seed::Culong)::Cvoid
+    return samples
+end
+
+# Allocate an rng in the cpp code
+function categorical_cpp!(samples::Vector{Int64}, probs::Vector{Float64},
                              totalprob::Float64=sum(probs); seed = 1)
     @ccall _SAMPLE_LIB_PATH.sample_categorical(
         length(probs)::Cint, length(samples)::Cint, probs::Ptr{Cdouble}, totalprob::Cdouble,
@@ -22,8 +32,12 @@ function sample_categorical_cpp!(samples::Vector{Int64}, probs::Vector{Float64},
     return samples
 end
 
-sample_categorical_cpp(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
-    sample_categorical_cpp!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
+categorical_cpp(probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
+    categorical_cpp!(Array{Int}(undef, nshot), probs, totalprob; seed=seed)
+
+categorical_cpp_rng(rng::Ptr{GSL.gsl_rng}, probs::Vector{Float64}, nshot::Integer, totalprob::Float64=sum(probs); seed = UInt64(1)) =
+    categorical_cpp!(rng, Array{Int}(undef, nshot), probs, totalprob; seed=seed)
+
 
 ###
 ### Accumulating counts
@@ -102,6 +116,7 @@ function multinom_rand(nsamp::Integer, p::AbstractVector{Float64})
     return Distributions.multinom_rand!(rng, nsamp, p, x)
 end
 
+# Passed to multinomial routine to write `val` from multinomial sample `k` times into vector `v`.
 function _fill_one_val(v::Vector, val::Integer, k::Integer, sum_n::Integer)
     for i in 1:val
         @inbounds v[sum_n + i] = k
@@ -109,10 +124,12 @@ function _fill_one_val(v::Vector, val::Integer, k::Integer, sum_n::Integer)
     return v
 end
 
-function counts_func(v::Vector, val::Integer, k::Integer, sum_n)
+# Passed to multinomial routine to simply record the sample for category `k`.
+function _counts_func(v::Vector, val::Integer, k::Integer, sum_n) # sum_n ignored
     @inbounds v[k] = val
 end
 
+categorical(nsamp::Integer, probs::AbstractVector) = categorical!(Random.GLOBAL_RNG, nsamp, probs, Vector{Int}(undef, nsamp))
 categorical(rng, nsamp::Integer, probs::AbstractVector) = categorical!(rng, nsamp, probs, Vector{Int}(undef, nsamp))
 
 function categorical!(rng, nsamp::Integer, probs::AbstractVector, samples::Vector)
@@ -120,48 +137,48 @@ function categorical!(rng, nsamp::Integer, probs::AbstractVector, samples::Vecto
     return _multinomial_or_categorical_rng!(rng, nsamp, probs, samples, _fill_one_val)
 end
 
+multinomial(nsamp, probs::AbstractVector) = multinomial!(Random.GLOBAL_RNG, nsamp, probs, similar(probs, Int))
 multinomial(rng, nsamp, probs::AbstractVector) = multinomial!(rng, nsamp, probs, similar(probs, Int))
 
 function multinomial!(rng, nsamp, probs::AbstractVector, samples::Vector)
     length(probs) == length(samples) || throw(DimensionMismatch("`probs` and `samples` must have the same length"))
-    return _multinomial_or_categorical_rng!(rng, nsamp, probs, samples, counts_func)
+    return _multinomial_or_categorical_rng!(rng, nsamp, probs, samples, _counts_func)
 end
 
-function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, nsamp, probs::Vector, samples, set_val_func)
+function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, args...)
     binomial_func = (rngs, n, p) -> rand(rng, Binomial(n, p))::Int
-    return _multinomial_or_categorical!(rng, binomial_func, nsamp, probs, samples, set_val_func)
+    return _multinomial_or_categorical!(rng, binomial_func, args...)
 end
 
-function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples, set_val_func)
+function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, args...)
     binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
-    return _multinomial_or_categorical!(rng, binomial_func, nsamp, probs, samples, set_val_func)
+    return _multinomial_or_categorical!(rng, binomial_func, args...)
 end
 
-# function _multinomial_or_categorical_rng!(rng::Random.AbstractRNG, nsamp, probs::Vector, samples, set_val_func)
-#     binomial_func = (rngs, n, p) -> rand(rng, Binomial(n, p))::Int
-#     return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
-# end
-
-# function _multinomial_or_categorical_rng!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::Vector, samples, set_val_func)
-#     binomial_func = (rngs, n, p) -> GSL.ran_binomial(rng, p, n)::UInt32
-#     return _multinomial_or_categorical!(rng, nsamp, probs, samples, binomial_func, set_val_func)
-# end
-
-# The main structure is copied from the gsl C function gsl_ran_multinomial
-# binomial_func -- Function that samples from the binomial distribution
-# set_val_func -- function that accumulates either 1) samples for categorical, or 2) binned samples for multinomial
+# The main structure is copied from the gsl C function gsl_ran_multinomial.
+# The check for p > 0 is added to prevent the Julia Binomial sampler from erroring.
+# binomial_func -- Function that samples from the binomial distribution.
+# set_val_func -- function that accumulates either 1) samples for categorical, or 2) binned samples for multinomial.
 function _multinomial_or_categorical!(rng, binomial_func, nsamp, probs::Vector, samples, set_val_func)
     sum_p = zero(eltype(probs))
     sum_n = 0
     norm = sum(probs)
     @inbounds for k in eachindex(probs)
-        sample = probs[k] > 0 ?
-            binomial_func(rng, nsamp - sum_n, probs[k] / (norm - sum_p)) : 0
+        p = probs[k] / (norm - sum_p)
+        n = nsamp - sum_n
+        if p >= 1
+            sample = n
+        elseif p > 0
+            sample = binomial_func(rng, n, p)
+        else
+            sample = 0
+        end
         set_val_func(samples, sample, k, sum_n)
         sum_p += probs[k]
         sum_n += sample
     end
     return samples
 end
+
 
 end # module

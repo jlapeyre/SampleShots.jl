@@ -8,13 +8,18 @@
 extern "C" {
   void sample_categorical(int nstates, int nshot, double *probs, double totalprob, long *samples, unsigned long seed);
   void sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed);
-  long sum_ints(long *x, long n);
+  // void long_sample_categorical(int nstates, int nshot, double *probs, double totalprob, long *samples, unsigned long seed);
+  // void long_sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed);  
 }
 
 void sample_categorical_rng(int nstates, int nshot, double *probs, double totalprob, long *samples, gsl_rng *gslgen, unsigned long seed)
 {
   int s, offset = 0, r = nshot;
 
+  totalprob = 0.0;
+  for (int j = 0; j < nstates; j++)
+    totalprob += probs[j];
+    
   gsl_rng_set(gslgen, seed);
   // Take nshot of samples from the above distribution, by conditional-binomial method:
   for (int j = 0; j < nstates - 1; j++)
@@ -38,3 +43,4 @@ void sample_categorical(int nstates, int nshot, double *probs, double totalprob,
   sample_categorical_rng(nstates, nshot, probs, totalprob, samples, gslgen, seed);
   gsl_rng_free(gslgen);
 }
+
