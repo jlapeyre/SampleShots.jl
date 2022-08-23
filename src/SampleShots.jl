@@ -10,6 +10,7 @@ export rand_catdist, multinomial, count_samples!
 export categorical_cpp!, categorical_cpp_rng!, categorical_cpp
 
 include("compile_cpp.jl")
+include("gsl_x.jl")
 
 function __init__()
     ensure_cpp_lib_compiled()
@@ -180,12 +181,6 @@ function _multinomial_or_categorical!(rng, binomial_func, nsamp, probs::Vector, 
 end
 
 gsl_multinomial(rng::Ptr{GSL.gsl_rng}, nsamp, probs::AbstractVector) =
-    gsl_multinomial!(rng, nsamp, probs, Vector{UInt32}(undef, length(probs)))
-
-function gsl_multinomial!(rng::Ptr{GSL.gsl_rng}, nsamp, probs::AbstractVector, counts::AbstractVector)
-    GSL.ran_multinomial(rng, length(probs), nsamp, probs, counts)
-    return counts
-end
-
+    ran_multinomial!(rng, nsamp, probs, Vector{UInt32}(undef, length(probs)))
 
 end # module
