@@ -13,8 +13,13 @@ We are intereted in two tasks
 
 ### C++ sampling routines
 
-To test the C++ routines, you have to build the library. On unix, you can run the script [`make_cpp_sampler.sh`](./make_cpp_sampler.sh)
+Some tests use C++ code.
 
+The code in [./src/compile_cpp.jl](./src/compile_cpp.jl) is supposed to compile the c++ code automatically. But the flags have
+not been tested on windows or apple. So it will fail on these platforms, but can be adapted.
+
+
+Ideas on flags and how to compile are also in [`make_cpp_sampler.sh`](./make_cpp_sampler.sh).
 
 <!-- #### Dependencies -->
 
