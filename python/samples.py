@@ -1,7 +1,28 @@
+import sys
 import numpy as np
 import timeit
+import collections
 
 rng = np.random.default_rng()
+
+CountsA = collections.namedtuple("CountsA", "inds counts")
+
+def get_count(counts, i):
+    ind = np.searchsorted(counts.inds, i)
+    if counts.inds[ind] == i:
+        return counts.counts[ind]
+    else:
+        return 0
+
+
+def counts_to_dict(counts):
+    return dict(zip(counts.inds, counts.counts))
+
+
+def counts_to_full_array(counts, arrlen):
+    full_array = np.zeros(arrlen, dtype='int')
+    full_array[counts.inds] = counts.counts
+    return full_array
 
 # "Naively" here means that a sampling operation does just what it says, rather than
 # Using a different technique to get the same statistics.
@@ -27,47 +48,145 @@ def sample_probs(probs, num_samples, rng=rng):
     return rng.choice(len(probs), size=num_samples, replace=True, p=probs, shuffle=True)
 
 
+def count_array(array):
+    inds, counts = np.unique(array, return_counts=True)
+    return CountsA(inds, counts)
+
+
 def count_map(array):
     "Return a dict whose keys are items from ``array`` and value are the number of times each item occurs."
     inds, counts = np.unique(array, return_counts=True)
     return dict(zip(inds, counts))
 
 
-def sample_counts(probs, num_samples):
-    "Sample from categorical distribution ``probs`` and build a count map of the results. All naively"
-    samples = sample_probs(probs, num_samples)
-    return count_map(samples)
+def sample_counts(probs, num_samples, rng=rng):
+    """Draw ``num_samples`` samples from  categorical distribution ``probs``
+    and build a `CountsA` of the results. All naively.
+    """
+    samples = sample_probs(probs, num_samples, rng=rng)
+    return count_array(samples)
 
-def sample_counts_mult(probs, num_samples):
+
+def sample_counts_dict(probs, num_samples, rng=rng):
+    """Draw ``num_samples`` samples from  categorical distribution ``probs``
+    and build a count map of the results. All naively.
+    """
+    counts = sample_counts(probs, num_samples, rng=rng)
+    return dict(zip(counts.inds, counts.counts))
+
+
+def sample_counts_mult(probs, num_samples, rng=rng):
+    """Effectively draw ``num_samples`` samples from  categorical distribution ``probs``
+    and count the number of each result. This isn not done naively, but rather from sampling
+    once from the associated multinomial distribution.
+
+    Returns a numpy array. Indices are categories, values are counts.
+    """
     count_samples = rng.multinomial(num_samples, probs)
     return count_samples
 
-def sample_counts_mult_dict(probs, num_samples):
+
+def sample_counts_mult_dict(probs, num_samples, rng=rng):
+    """Same as ``sample_counts_mult`` except the numpy array of counts is converted to a dict, which is returned.
+    Categories (indices) with value zero are *not* omitted.
+    """
     count_samples = rng.multinomial(num_samples, probs)
     return dict(zip(np.arange(len(count_samples)), count_samples))
 
+
 def time_code(num_timeit_times=1000, num_probs=10, num_samples=1000, num_reps=3, count_func="sample_counts"):
-    setup_code = f"from __main__ import make_probs, sample_counts, sample_counts_mult, sample_counts_mult_dict; probs=make_probs({num_probs})"
+    setup_code = f"from __main__ import make_probs, sample_counts, sample_counts_mult, sample_counts_mult_dict, sample_counts_dict; probs=make_probs({num_probs})"
     return timeit.Timer(f"{count_func}(probs, {num_samples})",
                         setup=setup_code).repeat(num_reps, num_timeit_times) #  timeit(num_timeit_times)
 
+
 from math import log
 
+
+def run_crossovers(mult_to_dict=False, choice_to_dict=False, verbose=True):
+    params = [
+        (10, 10000),
+        (100, 10000),
+        (10**3, 2000),
+        # (2*10**3, 1500),
+        # (3*10**3, 1500),
+        # (4*10**3, 1500),
+        # (5*10**3, 800),
+        # (8*10**3, 500),
+        # (10**4, 200),
+        # (2 * 10**4, 100),
+        # (3 * 10**4, 100),
+        # (4 * 10**4, 50),
+        # (5 * 10**4, 50),
+        # (6 * 10**4, 50),
+        # (7 * 10**4, 50),
+        # (8 * 10**4, 50),
+        # (9 * 10**4, 30),
+        # (10**5, 30),
+        # (2 * 10**5, 30),
+        # (3 * 10**5, 30),
+        # (5 * 10**5, 30),
+        # (8 * 10**5, 20),
+        # (10**6, 10),
+        # (3 * 10**6, 5),
+        # (5 * 10**6, 5),
+        # (8 * 10**6, 1, 0.1),
+        # (9 * 10**6, 1, 0.1),
+        # (10**7, 1, 0.1),
+        # (2 * 10**7, 1, 0.1),
+        # (4 * 10**7, 1, 0.05),
+        # (7 * 10**7, 1, 0.05),
+        # (9 * 10**7, 1, 0.045),
+        ]
+    num_probs_save = []
+    num_samps_save = []
+    start_frac_save = []
+    num_timeit_times_save = []
+    for ps in params:
+        start_frac = 1.0
+        if len(ps) == 3:
+            (num_probs, num_timeit_times, start_frac) = ps
+        else:
+            (num_probs, num_timeit_times) = ps
+        num_timeit_times_save.append(num_timeit_times)
+        start_frac_save.append(start_frac)
+        print(f"num_probs = {num_probs}", end="")
+        num_timeit_times = num_timeit_times * 3
+        sys.stdout.flush()
+        if verbose:
+            print()
+        else:
+            print(" ", end="")
+        num_samples = find_crossover(num_probs, num_timeit_times, start_frac=start_frac, mult_to_dict=mult_to_dict, choice_to_dict=mult_to_dict, verbose=verbose)
+        print()
+        num_probs_save.append(num_probs)
+        num_samps_save.append(num_samples)
+    return {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
+            'start_frac': start_frac_save}
+
+
 # start_frac = 0.15 is always high enough if we don't convert to dict
-def find_crossover(num_probs, num_timeit_times=200, start_frac=0.8, to_dict=False):
+def find_crossover(num_probs, num_timeit_times=200, start_frac=1.0, mult_to_dict=False, choice_to_dict=False, verbose=True):
     num_samps_hi = round(start_frac * num_probs)
     num_samps_lo = 1
     for i in range(100):
         num_samples = int((num_samps_hi + num_samps_lo) / 2)
-        count_func = "sample_counts"
+        if choice_to_dict:
+            count_func = "sample_counts_dict"
+        else:
+            count_func = "sample_counts"
         choice_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=count_func))
-        if to_dict:
+        if mult_to_dict:
             count_func = "sample_counts_mult_dict"
         else:
             count_func = "sample_counts_mult"
         mult_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=count_func))
         time_diff = mult_time - choice_time
-        print(f"t_rat: {time_diff/max([choice_time,mult_time])}, lo: {num_samps_lo}, hi: {num_samps_hi}, nsamps: {num_samples}")
+        if verbose:
+            print(f"t_rat: {time_diff/max([choice_time,mult_time])}, lo: {num_samps_lo}, hi: {num_samps_hi}, nsamps: {num_samples}")
+        else:
+            print(".", end="")
+            sys.stdout.flush()
         if time_diff > 0:
             mult_worse = True
         else:
@@ -82,7 +201,12 @@ def find_crossover(num_probs, num_timeit_times=200, start_frac=0.8, to_dict=Fals
     print()
     ratio = num_samples / num_probs
     print(f"ratio: {ratio}, num_samps: {num_samples}")
+    return (num_samples)
 
+
+###
+### run_timings works with `some_params` below
+###
 
 def run_timings(params):
     reslist = [0, 0]
