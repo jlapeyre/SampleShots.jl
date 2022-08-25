@@ -3,7 +3,8 @@ def make_proc_results(results: dict):
     proc_results['ratio'] = compute_ratio(results)
     return proc_results
 
-def print_ratio(proc_results, fn='ratio1.txt'):
+
+def print_ratio(proc_results, fn='ratio2.txt'):
     with open(fn, 'w') as fp:
         ratio = proc_results['ratio']
         nprobs = proc_results['num_probs']

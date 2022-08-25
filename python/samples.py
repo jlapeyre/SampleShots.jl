@@ -203,6 +203,7 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outf
                    choice_func="sample_counts", verbose=True):
     num_probs_save = []
     num_samps_save = []
+    num_samps_save = []
     start_frac_save = []
     num_timeit_times_save = []
     choice_time_save =[]
@@ -238,7 +239,9 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outf
         mult_time_save.append(mult_time)
         num_reps_save.append(num_reps)
         ratio_save.append(num_samples / num_probs) # this is post processing, but whatever
-        result_dict = {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
+        result_dict = {'num_probs': num_probs_save,
+                       'num_samps': num_samps_save,
+                       'num_timeit': num_timeit_times_save,
                        'start_frac': start_frac_save,
                        'choice_time': choice_time_save,
                        'mult_time': mult_time_save,

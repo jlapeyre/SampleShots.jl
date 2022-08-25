@@ -46,3 +46,5 @@ quick rather than strictly impossible if we use the right method.
   arrays of ints and floats.
 * Less complexity in code that creates and manipulates them
 
+
+![no image](./post_proc_results/samples1.png "Plot of sample stats")
