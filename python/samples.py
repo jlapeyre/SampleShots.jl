@@ -126,45 +126,67 @@ def time_code(num_timeit_times=1000, num_probs=10, num_samples=1000, num_reps=3,
 from math import log
 
 crossover_params = [
+    # (1 * 10**3, 500),
+    # (1500, 500),
+    # (2 * 10**3, 500),
+    # (2500, 500),
+    # (3 * 10**3, 500),
+    # (4 * 10**3, 500),
+    # (5 * 10**3, 500),
+    # (10**4, 100),
+
     (10, 1000),
+    (12, 1000),
+    (20, 1000),
+    (30, 1000),
+    (40, 1000),
+    (50, 1000),
+    (60, 1000),
+    (70, 1000),
     (100, 1000),
+    (200, 1000),
+    (400, 1000),
+    (600, 1000),
+    (800, 1000),
     (10**3, 1000),
-
-
-    # (10, 10000),
-    # (100, 10000),
-    # (10**3, 2000),
-
-
-    # (2*10**3, 1500),
-    # (3*10**3, 1500),
-    # (4*10**3, 1500),
-    # (5*10**3, 800),
-    # (8*10**3, 500),
-    # (10**4, 200),
-    # (2 * 10**4, 100),
-    # (3 * 10**4, 100),
-    # (4 * 10**4, 50),
-    # (5 * 10**4, 50),
-    # (6 * 10**4, 50),
-    # (7 * 10**4, 50),
-    # (8 * 10**4, 50),
-    # (9 * 10**4, 30),
-    # (10**5, 30),
-    # (2 * 10**5, 30),
-    # (3 * 10**5, 30),
-    # (5 * 10**5, 30),
-    # (8 * 10**5, 20),
-    # (10**6, 10),
-    # (3 * 10**6, 5),
-    # (5 * 10**6, 5),
-    # (8 * 10**6, 1, 0.1),
-    # (9 * 10**6, 1, 0.1),
-    # (10**7, 1, 0.1),
-    # (2 * 10**7, 1, 0.1),
-    # (4 * 10**7, 1, 0.05),
-    # (7 * 10**7, 1, 0.05),
-    # (9 * 10**7, 1, 0.045),
+    (1100, 1000),
+    (1300, 1000),
+    (1500, 1000),
+    (1700, 1000),
+    (1900, 1000),
+    (2*10**3, 1500),
+    (3*10**3, 1500),
+    (4*10**3, 1500),
+    (5*10**3, 800),
+    (8*10**3, 500),
+    (10**4, 200),
+    (2 * 10**4, 100),
+    (3 * 10**4, 100),
+    (4 * 10**4, 50),
+    (5 * 10**4, 50),
+    (6 * 10**4, 50),
+    (7 * 10**4, 50),
+    (8 * 10**4, 50),
+    (9 * 10**4, 30),
+    (10**5, 30),
+    (2 * 10**5, 30),
+    (3 * 10**5, 30),
+    (5 * 10**5, 30),
+    (8 * 10**5, 20),
+    (10**6, 10),
+    (10**6 + 2 * 10**5, 10),
+    (10**6 + 5 * 10**5, 10),
+    (10**6 + 7 * 10**5, 10),
+    (2 * 10**6, 5),
+    (3 * 10**6, 5),
+    (5 * 10**6, 5),
+    (8 * 10**6, 1, 0.1),
+    (9 * 10**6, 1, 0.1),
+    (10**7, 1, 0.1),
+    (2 * 10**7, 1, 0.1),
+    (4 * 10**7, 1, 0.05),
+    (7 * 10**7, 1, 0.05),
+    (9 * 10**7, 1, 0.045),
 ]
 
 
@@ -173,6 +195,9 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", choi
     num_samps_save = []
     start_frac_save = []
     num_timeit_times_save = []
+    choice_time_save =[]
+    mult_time_save =[]
+    num_reps_save = []
     for ps in params:
         start_frac = 1.0
         if len(ps) == 3:
@@ -188,25 +213,44 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", choi
             print()
         else:
             print(" ", end="")
-        num_samples = find_crossover(
+        (num_samples, choice_time, mult_time, num_reps) = find_crossover(
             num_probs, num_timeit_times, start_frac=start_frac,
             mult_func=mult_func, choice_func=choice_func, verbose=verbose
         )
         print()
         num_probs_save.append(num_probs)
         num_samps_save.append(num_samples)
+        choice_time_save.append(choice_time)
+        mult_time_save.append(mult_time)
+        num_reps_save.append(num_reps)
     return {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
-            'start_frac': start_frac_save}
+            'start_frac': start_frac_save,
+            'choice_time': choice_time_save,
+            'mult_time': mult_time_save,
+            'mult_func': mult_func,
+            'choice_func': choice_func,
+            'num_reps': num_reps_save
+            }
 
+
+# def time_ratio(choice_time, mult_time):
+#     if mult_time > choice_time:
+#         ratio = (mult_time - choice_time) / mult_time
+#     else:
+#         ratio = (choice_time - mult_time) / choice_time
+#     return ratio
 
 # start_frac = 0.15 is always high enough if we don't convert to dict
 def find_crossover(num_probs, num_timeit_times=200, start_frac=1.0, mult_func="sample_counts_mult", choice_func="sample_counts", verbose=True):
     num_samps_hi = round(start_frac * num_probs)
     num_samps_lo = 1
+    choice_time = 0.0
+    mult_time = 0.0
+    num_reps = 2
     for i in range(100):
         num_samples = int((num_samps_hi + num_samps_lo) / 2)
-        choice_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=choice_func))
-        mult_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=mult_func))
+        choice_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=choice_func, num_reps=num_reps)) / num_reps
+        mult_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=mult_func, num_reps=num_reps)) / num_reps
         time_diff = mult_time - choice_time
         if verbose:
             print(f"t_rat: {time_diff/max([choice_time,mult_time])}, lo: {num_samps_lo}, hi: {num_samps_hi}, nsamps: {num_samples}")
@@ -222,12 +266,12 @@ def find_crossover(num_probs, num_timeit_times=200, start_frac=1.0, mult_func="s
         else:
             num_samps_hi = num_samples
         samp_diff = num_samps_hi - num_samps_lo
-        if samp_diff < 2 or samp_diff / num_samps_hi < 0.05:
+        if samp_diff < 1 or samp_diff / num_samps_hi < 0.00001:
             break
     print()
     ratio = num_samples / num_probs
     print(f"ratio: {ratio}, num_samps: {num_samples}")
-    return (num_samples)
+    return (num_samples, choice_time, mult_time, num_reps)
 
 
 ###
