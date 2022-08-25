@@ -29,6 +29,7 @@ quick rather than strictly impossible if we use the right method.
 
 ### Data structures
 
+* Limitations of numpy
 
 ### Difference in efficiency of sampling schemes
 
