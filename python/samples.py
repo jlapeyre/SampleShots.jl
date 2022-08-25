@@ -1,4 +1,8 @@
 import sys
+import os
+import shutil
+import subprocess
+import pprint
 import numpy as np
 import timeit
 import collections
@@ -189,8 +193,19 @@ crossover_params = [
     (9 * 10**7, 1, 0.045),
 ]
 
+import pprint
 
-def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", choice_func="sample_counts", verbose=True):
+def write_res(samp_results: dict, basefn: str):
+    fname = basefn + ".txt"
+    if os.path.exists(fname):
+        shutil.copyfile(fname, basefn +  ".bak.txt")
+    with open(fname, 'w') as fp:
+        fp.write(pprint.pformat(samp_results))
+
+
+def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outfile="sample_data",
+                   timeit_factor=1,
+                   choice_func="sample_counts", verbose=True):
     num_probs_save = []
     num_samps_save = []
     start_frac_save = []
@@ -198,16 +213,18 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", choi
     choice_time_save =[]
     mult_time_save =[]
     num_reps_save = []
+
+    spresponse = subprocess.run(["git",  "log", "--pretty=format:'%h'", "-n", "1" ], capture_output=True)
+    commit = spresponse.stdout.decode()
     for ps in params:
         start_frac = 1.0
         if len(ps) == 3:
             (num_probs, num_timeit_times, start_frac) = ps
         else:
             (num_probs, num_timeit_times) = ps
-        num_timeit_times_save.append(num_timeit_times)
         start_frac_save.append(start_frac)
         print(f"num_probs = {num_probs}", end="")
-        num_timeit_times = num_timeit_times * 3
+        num_timeit_times = num_timeit_times * timeit_factor
         sys.stdout.flush()
         if verbose:
             print()
@@ -220,18 +237,22 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", choi
         print()
         num_probs_save.append(num_probs)
         num_samps_save.append(num_samples)
+        num_timeit_times_save.append(num_timeit_times)
         choice_time_save.append(choice_time)
         mult_time_save.append(mult_time)
         num_reps_save.append(num_reps)
-    return {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
-            'start_frac': start_frac_save,
-            'choice_time': choice_time_save,
-            'mult_time': mult_time_save,
-            'mult_func': mult_func,
-            'choice_func': choice_func,
-            'num_reps': num_reps_save
-            }
-
+        result_dict = {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
+                       'start_frac': start_frac_save,
+                       'choice_time': choice_time_save,
+                       'mult_time': mult_time_save,
+                       'mult_func': mult_func,
+                       'choice_func': choice_func,
+                       'num_reps': num_reps_save,
+                       'timeit_factor': timeit_factor,
+                       'commit': commit
+                       }
+        write_res(result_dict, outfile)
+    return result_dict
 
 # def time_ratio(choice_time, mult_time):
 #     if mult_time > choice_time:
@@ -249,8 +270,9 @@ def find_crossover(num_probs, num_timeit_times=200, start_frac=1.0, mult_func="s
     num_reps = 2
     for i in range(100):
         num_samples = int((num_samps_hi + num_samps_lo) / 2)
-        choice_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=choice_func, num_reps=num_reps)) / num_reps
-        mult_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=mult_func, num_reps=num_reps)) / num_reps
+        # divide by correct number, not num_reps
+        choice_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=choice_func, num_reps=num_reps)) / num_timeit_times
+        mult_time = min(time_code(num_timeit_times, num_probs, num_samples, count_func=mult_func, num_reps=num_reps)) / num_timeit_times
         time_diff = mult_time - choice_time
         if verbose:
             print(f"t_rat: {time_diff/max([choice_time,mult_time])}, lo: {num_samps_lo}, hi: {num_samps_hi}, nsamps: {num_samples}")

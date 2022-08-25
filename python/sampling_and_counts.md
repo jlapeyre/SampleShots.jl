@@ -31,3 +31,18 @@ quick rather than strictly impossible if we use the right method.
 
 * Limitations of numpy
 * ??
+
+#### Better
+
+* Store data in plain format: best is numpy arrays of some kind of machine ints or floats.
+* Get fancier formats an needed information in meta data.
+* Methods to convert to format required by consumer
+* Methods to print or display in friendly or desired format. Eg: 1 -> '00001'.
+
+
+#### Advantages of basic data types
+* Faster to process: read, write, serialize
+* Easier to interoperate with other languages. Eg. compiled languages. They can send and receive
+  arrays of ints and floats.
+* Less complexity in code that creates and manipulates them
+
