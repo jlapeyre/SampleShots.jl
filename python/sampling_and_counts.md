@@ -9,7 +9,8 @@ or alternatively, sample once from the associated multinomial distribution. Both
 the same statistics.  The question is when should we prefer one over the other? Let's give them
 names
 
-* The *categorical* method.
+* The *categorical* method. The first method above. This involves sampling from the
+  categorical distribution $\mathbf{p}=(p_1,\ldots,p_k)$.
 
 
 ### Difference in efficiency of sampling schemes
