@@ -130,15 +130,6 @@ def time_code(num_timeit_times=1000, num_probs=10, num_samples=1000, num_reps=3,
 from math import log
 
 crossover_params = [
-    # (1 * 10**3, 500),
-    # (1500, 500),
-    # (2 * 10**3, 500),
-    # (2500, 500),
-    # (3 * 10**3, 500),
-    # (4 * 10**3, 500),
-    # (5 * 10**3, 500),
-    # (10**4, 100),
-
     (10, 1000),
     (12, 1000),
     (20, 1000),
@@ -154,9 +145,13 @@ crossover_params = [
     (800, 1000),
     (10**3, 1000),
     (1100, 1000),
+    (1200, 1000),
     (1300, 1000),
+    (1400, 1000),
     (1500, 1000),
+    (1600, 1000),
     (1700, 1000),
+    (1800, 1000),
     (1900, 1000),
     (2*10**3, 1500),
     (3*10**3, 1500),
@@ -213,6 +208,7 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outf
     choice_time_save =[]
     mult_time_save =[]
     num_reps_save = []
+    ratio_save = []
 
     spresponse = subprocess.run(["git",  "log", "--pretty=format:'%h'", "-n", "1" ], capture_output=True)
     commit = spresponse.stdout.decode()
@@ -241,6 +237,7 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outf
         choice_time_save.append(choice_time)
         mult_time_save.append(mult_time)
         num_reps_save.append(num_reps)
+        ratio_save.append(num_samples / num_probs) # this is post processing, but whatever
         result_dict = {'num_probs': num_probs_save, 'num_samps': num_samps_save, 'num_timeit': num_timeit_times_save,
                        'start_frac': start_frac_save,
                        'choice_time': choice_time_save,
@@ -248,6 +245,7 @@ def run_crossovers(params=crossover_params, mult_func="sample_counts_mult", outf
                        'mult_func': mult_func,
                        'choice_func': choice_func,
                        'num_reps': num_reps_save,
+                       'ratio': ratio_save,
                        'timeit_factor': timeit_factor,
                        'commit': commit
                        }
