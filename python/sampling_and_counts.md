@@ -27,12 +27,20 @@ quick rather than strictly impossible if we use the right method.
 * In practice there are complicating factors: pre- and post-processing, data structures, PL constraints, whether you want to
   do sampling repeatedly. There are different sub-algorithms that can be chosen for each of the two methods.
 
-### Items to not forget to put somewhere in this doc
 
-* Limitations of numpy
+### Some of the many issues that affect which is better
+
+* Language choice. Eg. limitations of numpy. Ability to do multithreading. Libraries available.
+  The same algorithm can perform differently in different compiled langages. Existence and performance
+  of multiple threads?
+* There are several algorithms for sampling from a categorical distribution. Some have an upfront cost.
+  Some don't: Binary search, alias table, etc.
+* There are several algorithms for sampling from a multinomial distribution. Some implementations choose
+  among them conditionally. I think the choices are perhaps not always best.
+* The data format expected at the end. It takes extra work to convert one of them to the format of the other.
+  They both have the same penalt to get to the final format.
 * Which method is better will depend on characteristics of $\mathbf{p}$. In experiments, I choose
   iid uniformly distributed $p_i$.
-* ??
 
 #### Better way to store counts data
 
@@ -76,10 +84,10 @@ Here are a few of the caveats
 Some further details of the data plotted below.
 * Everything was done with numpy. There is code for doing this in C++ and Julia elsewhere in this repo.
 * No output data is converted to a `dict`, although this is the current data format used in Qiskit.
-* I did the multinomial method two ways: 1) keep the format returned by the numpy funcion `unique`.
+* I did the multinomial method two ways: 1) keep the format returned by the numpy function `unique`.
   2) Convert this output to the format produced by `np.nonzero`. The latter is the same format that
   the categorical method returns. There are two curves below. The threshold is of course higher if
-  we do the extra conversion step.
+  we do the extra conversion step. Purple curve includes conversion. Green curve omits conversion.
 * I don't know (or have forgotten for the moment) the algorithms used in the functions below.
 * Functions used
     * `rng.uniform` to make $\mathbf{p}$.
@@ -88,11 +96,11 @@ Some further details of the data plotted below.
     * `rng.multinomial` to sample from the multinomial distribution.
     * `np.nonzero` and indexing into an array with an array to convert the single array in the
        last step to a pair of arrays similar to those returned by `np.unique`. This final step
-        was omitted for one of the curves below.
+        was omitted for the green curve below.
 
 ![no image](./post_proc_results/samples1.png "Plot of sample stats")
 
-<!--  LocalWords:  ldots multinomial mathbf Qiskit qiskit aer pre numpy iid ints Eg '00001
+<!--  LocalWords:  ldots multinomial mathbf Qiskit qiskit aer pre numpy iid ints Eg '00001 dicts np
  -->
-<!--  LocalWords:  interoperate
+<!--  LocalWords:  interoperate repo rng
  -->
