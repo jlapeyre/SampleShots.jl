@@ -2,9 +2,12 @@
 
 We want to collect $n$ samples from the probability distribution $p(i), i=1,\ldots k$ and
 return the number of times that each value of $i$ was sampled. This corresponds to binning
-shots (with the finest bins). We can either perform the procedure just described, or alternatively,
-sample once from the associated multinomial distribution. Both give counts with the same statistics.
-The question is when should we prefer one over the other? Let's give them names
+shots (with the finest bins).
+
+There are at least two ways to do this sampling. We can either perform the procedure just described,
+or alternatively, sample once from the associated multinomial distribution. Both give counts with
+the same statistics.  The question is when should we prefer one over the other? Let's give them
+names
 
 * The *categorical* method.
 
