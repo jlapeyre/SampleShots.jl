@@ -30,6 +30,8 @@ quick rather than strictly impossible if we use the right method.
 
 ### Some of the many issues that affect which is better
 
+Note that the multinomial method is always better for large enough $n$.
+
 * Language choice. Eg. limitations of numpy. Ability to do multithreading. Libraries available.
   The same algorithm can perform differently in different compiled langages. Existence and performance
   of multiple threads?
@@ -59,6 +61,15 @@ quick rather than strictly impossible if we use the right method.
   conversion and display routines.
 
 ### Benchmark results
+
+The multinomial method is always better for large enough $n$. I did benchmarks to determine
+the value of $n$ above which multinomial is better.
+
+A main takeaway is that this crossover always occurs for $n/k$ well below $1$. This means
+that the expected number of counts for each $p_i$ is less than $1$. It's probably not useful
+to sample in this regime. (There are caveats below, eg, this does not consider $\mathbf{p}$ 
+with structure.)
+
 
 I did the following benchmark
 1. Fix $k$ (the length of the probability distribution $\mathbf{p}$).
