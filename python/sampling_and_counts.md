@@ -27,24 +27,72 @@ quick rather than strictly impossible if we use the right method.
 * In practice there are complicating factors: pre- and post-processing, data structures, PL constraints, whether you want to
   do sampling repeatedly. There are different sub-algorithms that can be chosen for each of the two methods.
 
-### Data structures
+### Items to not forget to put somewhere in this doc
 
 * Limitations of numpy
+* Which method is better will depend on characteristics of $\mathbf{p}$. In experiments, I choose
+  iid uniformly distributed $p_i$.
 * ??
 
-#### Better
+#### Better way to store counts data
 
 * Store data in plain format: best is numpy arrays of some kind of machine ints or floats.
 * Get fancier formats an needed information in meta data.
 * Methods to convert to format required by consumer
 * Methods to print or display in friendly or desired format. Eg: 1 -> '00001'.
 
-
 #### Advantages of basic data types
-* Faster to process: read, write, serialize
+
+* Faster to process: read, write, serialize.
+* Scales much better than dicts with strings as keys.
 * Easier to interoperate with other languages. Eg. compiled languages. They can send and receive
   arrays of ints and floats.
-* Less complexity in code that creates and manipulates them
+* Less complexity in code that creates and manipulates them. The complexity is moved to
+  conversion and display routines.
 
+### Benchmark results
+
+I did the following benchmark
+1. Fix $k$ (the length of the probability distribution $\mathbf{p}$).
+2. Choose a random $p$. Each element is iid, uniform on $(0, 1)$. Normalize the result.
+3. Choose $n$ the number of samples.
+4. Record the time for sampling via the categorical method.
+5. Record the time for sampling via the multinomial method.
+6. Adjust $n$ via binary search for the value such that the two times are closest. Go to step 3.
+   Break when the best $n$ is found.
+7. Record the pair $(k, n)$. Recall $k$ was chose, and $n$ computed.
+8. Increment $k$ by some amount and go to step 1. Break when $k$ reaches a predetermined limit.
+
+You can use the results like this: The user sends a distribution $\mathbf{p}$ and a number of
+samples $n_{in}$. Look up a pair $(k, n)$ in the table by the value of the input $k$.
+If $n_{in}$ is larger than $n$ from the table, then use the multinomial method. Otherwise use
+the categorical
+
+Here are a few of the caveats
+* This assumes that the input probabilities are similar to those we used in the benchmarks. This is
+  probably a bad assumption. There are many circuits that result in most probability concentrated one
+  a small number of output strings.
+
+Some further details of the data plotted below.
+* Everything was done with numpy. There is code for doing this in C++ and Julia elsewhere in this repo.
+* No output data is converted to a `dict`, although this is the current data format used in Qiskit.
+* I did the multinomial method two ways: 1) keep the format returned by the numpy funcion `unique`.
+  2) Convert this output to the format produced by `np.nonzero`. The latter is the same format that
+  the categorical method returns. There are two curves below. The threshold is of course higher if
+  we do the extra conversion step.
+* I don't know (or have forgotten for the moment) the algorithms used in the functions below.
+* Functions used
+    * `rng.uniform` to make $\mathbf{p}$.
+    * `rng.choice` to sample from $\mathbf{p}$.
+    * `np.unique` to reduce the results in the latter step.
+    * `rng.multinomial` to sample from the multinomial distribution.
+    * `np.nonzero` and indexing into an array with an array to convert the single array in the
+       last step to a pair of arrays similar to those returned by `np.unique`. This final step
+        was omitted for one of the curves below.
 
 ![no image](./post_proc_results/samples1.png "Plot of sample stats")
+
+<!--  LocalWords:  ldots multinomial mathbf Qiskit qiskit aer pre numpy iid ints Eg '00001
+ -->
+<!--  LocalWords:  interoperate
+ -->
