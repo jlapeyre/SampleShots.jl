@@ -9,9 +9,17 @@ or alternatively, sample once from the associated multinomial distribution. Both
 the same statistics.  The question is when should we prefer one over the other? Let's give them
 names
 
-* The *categorical* method. The first method above. This involves sampling from the
-  categorical distribution $\mathbf{p}=(p_1,\ldots,p_k)$.
+* The *categorical* method. The first method above. (The first step is sampling from the
+  categorical distribution $\mathbf{p}=(p_1,\ldots,p_k)$.)
+* The *multinomial* method. The second method above.
 
+Time complexity
+* Both methods are at least linear in $k$, i.e. $O(k)$ in $k$. I guess, all reasonable programming language
+  implementations are really $O(k)$.
+* The multinomial method is $O(1)$ in $n$. The categorical method is $O(n)$. So for large enough $n$,
+  multinomial is better.
+* In practice there are complicating factors: pre- and post-processing, data structures, PL constraints, whether you want to
+  do sampling repeatedly.
 
 ### Difference in efficiency of sampling schemes
 
