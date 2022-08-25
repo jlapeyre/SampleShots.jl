@@ -1,4 +1,4 @@
-#### Sampling problem
+### Sampling problem
 
 We want to collect $n$ samples from the probability distribution $p(i), i=1,\ldots k$ and
 return the number of times that each value of $i$ was sampled. This corresponds to binning
@@ -13,7 +13,7 @@ names
   categorical distribution $\mathbf{p}=(p_1,\ldots,p_k)$.)
 * The *multinomial* method. The second method above.
 
-Time complexity
+#### Time complexity
 * Both methods are at least linear in $k$, i.e. $O(k)$ in $k$. I guess, all reasonable programming language
   implementations are really $O(k)$.
 * The multinomial method is $O(1)$ in $n$. The categorical method is $O(n)$. So for large enough $n$,
