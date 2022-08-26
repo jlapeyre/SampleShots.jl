@@ -30,7 +30,7 @@ quick rather than strictly impossible if we use the right method.
 
 ### A few of the issues that affect which is better
 
-Note that the multinomial method is always better for large enough $n$.
+Note that the multinomial method is always better for large enough $n$ .
 
 * Language choice. Eg. limitations of numpy. Ability to do multithreading. Libraries available.
   The same algorithm can perform differently in different compiled langages. Existence and performance
