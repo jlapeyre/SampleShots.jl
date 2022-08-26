@@ -35,6 +35,7 @@ Note that the multinomial method is always better for large enough $n$ .
 * Language choice. Eg. limitations of numpy. Ability to do multithreading. Libraries available.
   The same algorithm can perform differently in different compiled langages. Existence and performance
   of multiple threads?
+    * numpy's multinomial seems to [unconditionally do](https://github.com/numpy/numpy/blob/50a74fb65fc752e77a2f9e9e2b7227629c2ba953/numpy/random/src/distributions/distributions.c#L1672-L1689) the conditional binomial method.
 * There are several algorithms for sampling from a categorical distribution. Some have an upfront cost.
   Some don't: Binary search, alias table, etc.
 * There are several algorithms for sampling from a multinomial distribution. Some implementations choose
