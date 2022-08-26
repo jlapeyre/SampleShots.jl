@@ -28,7 +28,7 @@ quick rather than strictly impossible if we use the right method.
   do sampling repeatedly. There are different sub-algorithms that can be chosen for each of the two methods.
 
 
-### Some of the many issues that affect which is better
+### A few of the issues that affect which is better
 
 Note that the multinomial method is always better for large enough $n$.
 
