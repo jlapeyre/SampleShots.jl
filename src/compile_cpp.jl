@@ -15,15 +15,17 @@ function fpic_flag()
     return Sys.isunix() ? "-fPIC" : ""
 end
 
+# Works on linux and mac. Not tested on windows.
 function compile_cpp_lib()
-    # Escaping is probably not done correctly here
-    sample_src_path = joinpath(_PACKAGE_DIR, "src", "$_SRC_NAME.cc")
+    sample_src_path = Base.shell_split(PC.shell_escape(joinpath(_PACKAGE_DIR, "src", "$_SRC_NAME.cc")))
     include_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "include")))
     lib_path = PC.shell_escape(joinpath(GSL_jll.artifact_dir, "lib"))
     libs = Base.shell_split("-L $lib_path -lgsl  -lgslcblas")
     cflags = Base.shell_split("-Wall -march=native -O3")
-    cmd = `$(PC.bitflag()) $(cflags) $(fpic_flag()) -I$include_path $(libs) -shared -rdynamic  -o $_SAMPLE_LIB_PATH $sample_src_path  -Wl,-rpath,$lib_path`
+    # -Wl,-rpath works for gcc and clang. -Wl=-rpath errors out for clang
+    cmd = `$(PC.bitflag()) $cflags $(fpic_flag()) -I$include_path $libs -shared -rdynamic -o $_SAMPLE_LIB_PATH $sample_src_path -Wl,-rpath,$lib_path`
     println(cmd)
+    println(cmd.exec)
     @info "Compiling C++ code."
     try
         PC.run_compiler(cmd; cplusplus=true)
