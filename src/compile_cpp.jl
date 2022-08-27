@@ -17,11 +17,13 @@ end
 
 function compile_cpp_lib()
     # Escaping is probably not done correctly here
-    include_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "include")))
-    lib_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "lib")))
     sample_src_path = joinpath(_PACKAGE_DIR, "src", "$_SRC_NAME.cc")
-    cmd = `$(PC.bitflag()) -Wall -march=native -O3 $(fpic_flag()) -I$include_path -L$lib_path -lgsl  -lgslcblas -shared -rdynamic  -o $_SAMPLE_LIB_PATH $sample_src_path  -Wl,-rpath=$lib_path`
-
+    include_path = Base.shell_split(PC.shell_escape(joinpath(GSL_jll.artifact_dir, "include")))
+    lib_path = PC.shell_escape(joinpath(GSL_jll.artifact_dir, "lib"))
+    libs = Base.shell_split("-L $lib_path -lgsl  -lgslcblas")
+    cflags = Base.shell_split("-Wall -march=native -O3")
+    cmd = `$(PC.bitflag()) $(cflags) $(fpic_flag()) -I$include_path $(libs) -shared -rdynamic  -o $_SAMPLE_LIB_PATH $sample_src_path  -Wl,-rpath,$lib_path`
+    println(cmd)
     @info "Compiling C++ code."
     try
         PC.run_compiler(cmd; cplusplus=true)
