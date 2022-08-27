@@ -3,7 +3,6 @@
 [![Build Status](https://github.com/jlapeyre/SampleShots.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/jlapeyre/SampleShots.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/jlapeyre/SampleShots.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/jlapeyre/SampleShots.jl)
 
-
 Test various ways to sample from a categorical distribution.
 We are intereted in two tasks
 
@@ -15,11 +14,8 @@ We are intereted in two tasks
 
 Some tests use C++ code.
 
-The code in [./src/compile_cpp.jl](./src/compile_cpp.jl) is supposed to compile the c++ code automatically. But the flags have
-not been tested on windows or apple. So it will fail on these platforms, but can be adapted.
-
-
-Ideas on flags and how to compile are also in [`make_cpp_sampler.sh`](./make_cpp_sampler.sh).
+The code in [./src/compile_cpp.jl](./src/compile_cpp.jl) compiles the c++ code automatically. But the flags have
+not been tested on windows.
 
 <!-- #### Dependencies -->
 
